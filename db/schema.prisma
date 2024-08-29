@@ -1,0 +1,94 @@
+datasource db {
+  provider = "postgres"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// --------------------------------------
+
+model User {
+  id             Int      @id @default(autoincrement())
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  name           String?
+  email          String   @unique
+  hashedPassword String?
+  role           String   @default("USER")
+
+  tokens      Token[]
+  sessions    Session[]
+  dataSources DataSource[] // Use camelCase for consistency
+  Comparator  Comparator[]
+}
+
+model Session {
+  id                 Int       @id @default(autoincrement())
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  expiresAt          DateTime?
+  handle             String    @unique
+  hashedSessionToken String?
+  antiCSRFToken      String?
+  publicData         String?
+  privateData        String?
+
+  user   User? @relation(fields: [userId], references: [id])
+  userId Int?
+}
+
+model Token {
+  id          Int      @id @default(autoincrement())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  hashedToken String
+  type        String
+  expiresAt   DateTime
+  sentTo      String
+
+  user   User @relation(fields: [userId], references: [id])
+  userId Int
+
+  @@unique([hashedToken, type])
+}
+
+model Comparator {
+  id          Int      @id @default(autoincrement())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  ownerId     Int // Foreign key to User
+  name        String
+  description String
+  logo        String
+  color       String
+  toolType    String
+
+  owner User @relation(fields: [ownerId], references: [id]) // Establish relationship to User
+}
+
+model DataSource {
+  id        String   @id @default(cuid())
+  userId    Int // Foreign key to User
+  authKey   String
+  type      String
+  sheetId   String
+  lastUsed  DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user            User             @relation(fields: [userId], references: [id])
+  selectedColumns SelectedColumn[]
+}
+
+model SelectedColumn {
+  id           String   @id @default(cuid())
+  dataSourceId String // Foreign key to DataSource
+  tabName      String
+  columnName   String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  dataSource DataSource @relation(fields: [dataSourceId], references: [id])
+}
